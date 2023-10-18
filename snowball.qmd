@@ -125,6 +125,9 @@ The column are: (the Concept columns are not that relevant at the moment)
 ```{r}
 #| label: openalex_graph
 
+x <- snowball
+x
+
 if (!file.exists(file.path("figures", "snowball_cited_by_count.png"))) {
 plot_snowball(
     snowball,
