@@ -4,7 +4,7 @@ author: Rainer M Krug <Rainer.Krug@senckenberg.de> <Rainer@krugs.de>
 format:
     html:
         toc: true
-        toc-depth: 2
+        toc-depth: 4
         embed-resources: true
         code-fold: true
         code-summary: "Show the code"
@@ -82,8 +82,7 @@ flat_snow <- snowball2df(snowball)  |>
  tibble::as_tibble()
 ```
 
-### Save snowball as Excel file (`snowball_excel.xlsx`)
-TODO: not working - but why????
+### Save snowball as Excel file ([`snowball.xlsx`](data/snowball.xlsx))
 
 ```{r}
 #| label: openalex_excel
