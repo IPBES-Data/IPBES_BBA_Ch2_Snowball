@@ -98,6 +98,8 @@ if (!file.exists(fn)) {
 }
 ```
 
+To download [click here](data/snowball.xlsx)
+
 The column are: (the Concept columns are not that relevant at the moment)
 
 - **id**: internal id fromOpenAlex
@@ -135,7 +137,8 @@ plot_snowball(
 )
 }
 ```
-![Snowball Cited by Count per Yeart](figures/Snowball_cited_by_count.png)
+![Snowball Cited by Count per Yeart](figures/snowball_cited_by_count_by_year.png)
+Fer a pdf of the graph (better resolution) [click here](figures/snowball_cited_by_count_by_year.pdf)
 
 ## Supplemented Snowball by Edges between all Papers
 
@@ -191,4 +194,5 @@ if (!file.exists(file.path("figures", "snowball_supplemented_cited_by_count.png"
     )
 }
 ```
-![Supplemented Cited by count](figures/snowball_supplemented_cited_by_count.png)
+![Supplemented Cited by count](figures/snowball_supplemented_cited_by_count_by_year.png)
+For a pdf of the reaults (better resolution) [click here](figures/snowball_supplemented_cited_by_count_by_year.pdf)
