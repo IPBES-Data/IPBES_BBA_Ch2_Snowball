@@ -19,7 +19,15 @@ Once finalised, the final repo will be published on Zenodo
 - **Chapter**: Ch 4
 - **Short Name**: `IPBES_BBA_Ch2_Snowball`
   Please always include `IPBES_BBA_Ch2_Snowball` in the title of the email to make sure it gets filtered correctly.
-- **Status**: waiting for response and way forward
+- **Status**: 
+  - [x] meeting 07 Novamber 2023
+    - [ ] compare snowball to related papers of keypapers
+    - [ ] one graph cited by key papers
+    - [ ] one graph citing by key papers
+    - [ ] next meeting to be discussed by BBA
+
+
+
 
 - **Assigned To**:
   - Rainer <Rainer.Krug@Senckenberg.de> <Rainer@krugs.de>
@@ -38,7 +46,7 @@ Once finalised, the final repo will be published on Zenodo
   - ...
 
 - **Github Repo**: [github repository](https://github.com/IPBES-Data/IPBES_BBA_Ch2_Snowball)
-- **Googl Drive Folder**: None at the moment
+- **Google Drive Folder**: None at the moment
 
 ## Folders
 
