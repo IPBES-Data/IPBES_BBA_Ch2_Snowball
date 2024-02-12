@@ -16,18 +16,15 @@ Once finalised, the final repo will be published on Zenodo
 
 - **Project name**: Business and Biodiversity - Ch 2 - Snowball
 - **Assessment**: Business and Biodiversity
-- **Chapter**: Ch 4
+- **Chapter**: Ch 2
 - **Short Name**: `IPBES_BBA_Ch2_Snowball`
   Please always include `IPBES_BBA_Ch2_Snowball` in the title of the email to make sure it gets filtered correctly.
-- **Status**: 
+- **Status**:
   - [x] meeting 07 Novamber 2023
     - [ ] compare snowball to related papers of keypapers
     - [ ] one graph cited by key papers
     - [ ] one graph citing by key papers
     - [ ] next meeting to be discussed by BBA
-
-
-
 
 - **Assigned To**:
   - Rainer <Rainer.Krug@Senckenberg.de> <Rainer@krugs.de>

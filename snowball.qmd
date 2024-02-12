@@ -39,7 +39,42 @@ list.files(
     )
 
 
-kp <- read.csv(file.path("Key Papers", "Tuije.csv"))
+kp <- read.csv(file.path("input", "Key Papers", "Tuije.csv"))
+
+encore <- encore <- data.frame(
+    value = readxl::read_excel(
+        path = file.path("input", "Key Papers", "CONFIDENTIAL_SUSTAIN Qualitative Database_Industry Expert version WORKINGCOPY.xlsx"),
+        sheet = "3. references line-by-line"
+    )$Value |>
+        unique(),
+    link = NA,
+    doi = NA
+)
+
+encore <- encore[!is.na(encore$value),]
+
+encore$link <- encore$value |>
+    sub(pattern = ".*(?=https)", replacement = "", perl = TRUE) |>
+    sub(pattern = "\\?.*", replacement = "", perl = TRUE) |>
+    sub(pattern = "\\.$", replacement = "")
+
+encore$link[grep("^http", encore$link, invert = TRUE)] <- NA
+
+
+## dois
+ids <- grep("https://doi.org/", encore$link)
+encore$doi[ids] <- sub("https://doi.org/", "", encore$link[ids])
+
+ids <- grep("/doi/full/", encore$link)
+encore$doi[ids] <- sub("^.*/doi/full/", "", encore$link[ids])
+
+ids <- grep("/doi/abs/", encore$link)
+encore$doi[ids] <- sub("^.*/doi/abs/", "", encore$link[ids])
+
+ids <- grep("/doi/pdf/", encore$link)
+encore$doi[ids] <- sub("^.*/doi/pdf/", "", encore$link[ids])
+
+
 ```
 
 ## Back to [Readme](https://IPBES-Data.github.io/IPBES_BBA_Ch2_Snowball/)
