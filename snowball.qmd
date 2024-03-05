@@ -8,12 +8,23 @@ format:
         embed-resources: true
         code-fold: true
         code-summary: "Show the code"
+        grid:
+            sidebar-width: 0px
+            body-width: 4000px
+            margin-width: 200px
+            gutter-width: 1.5rem   
 ---
 
 # Setup
 ```{r}
 #| label: setup
 #|
+
+if (!exists("params")) {
+    params <- rmarkdown::yaml_front_matter("snowball.qmd")$params
+}
+
+knitr::opts_chunk$set(message = NA)
 
 # library(bibtex)
 library(openalexR)
@@ -22,10 +33,14 @@ library(IPBES.R)
 library(tibble)
 library(dplyr)
 
+# library(readxl)
+
 # library(writexl)
 # library(ggplot2)
 # library(ggraph)
 # library(tidygraph)
+
+library(chorddiag)
 
 library(knitr)
 
@@ -41,52 +56,33 @@ list.files(
 
 kp <- read.csv(file.path("input", "Key Papers", "Tuije.csv"))
 
-encore <- encore <- data.frame(
-    value = readxl::read_excel(
-        path = file.path("input", "Key Papers", "CONFIDENTIAL_SUSTAIN Qualitative Database_Industry Expert version WORKINGCOPY.xlsx"),
-        sheet = "3. references line-by-line"
-    )$Value |>
-        unique(),
-    link = NA,
-    doi = NA
-)
-
-encore <- encore[!is.na(encore$value),]
-
-encore$link <- encore$value |>
-    sub(pattern = ".*(?=https)", replacement = "", perl = TRUE) |>
-    sub(pattern = "\\?.*", replacement = "", perl = TRUE) |>
-    sub(pattern = "\\.$", replacement = "")
-
-encore$link[grep("^http", encore$link, invert = TRUE)] <- NA
-
-
-## dois
-ids <- grep("https://doi.org/", encore$link)
-encore$doi[ids] <- sub("https://doi.org/", "", encore$link[ids])
-
-ids <- grep("/doi/full/", encore$link)
-encore$doi[ids] <- sub("^.*/doi/full/", "", encore$link[ids])
-
-ids <- grep("/doi/abs/", encore$link)
-encore$doi[ids] <- sub("^.*/doi/abs/", "", encore$link[ids])
-
-ids <- grep("/doi/pdf/", encore$link)
-encore$doi[ids] <- sub("^.*/doi/pdf/", "", encore$link[ids])
-
+kp_encore <- readxl::read_excel(
+    path = file.path("input", "Key Papers", "CONFIDENTIAL_SUSTAIN Qualitative Database_Industry Expert version WORKINGCOPY.xlsx"),
+    sheet = "3. references DOIs"
+) |>
+    select(DOI) |>
+    filter(
+        !is.na(DOI)
+    ) |>
+    filter(
+        grepl(pattern = "https://doi", DOI)
+    ) |>
+    distinct() |>
+    mutate(
+        DOI = sub("https://doi.org/", "", DOI)
+    )
 
 ```
 
 ## Back to [Readme](https://IPBES-Data.github.io/IPBES_BBA_Ch2_Snowball/)
 
-## Simple Snowball
+# Get data
 
-### Setup OpelAnex usage and do snowball serarch
+## Setup OpelAnex usage and do snowball serarch
 
 ```{r}
 #| label: openalex_prep
 #|
-
 
 fn <- file.path(".", "data", "key_works.rds")
 if (file.exists(fn)) {
@@ -95,7 +91,7 @@ if (file.exists(fn)) {
     key_works <- oa_fetch(
         entity = "works",
         doi = kp$DOI,
-        verbose = FALSE
+        verbose = TRUE
     )
     saveRDS(key_works, fn)
 }
@@ -108,78 +104,52 @@ if (file.exists(fn)) {
 } else {
     snowball <- oa_snowball(
         identifier = ids,
-        verbose = FALSE
+        verbose = TRUE
     )
     saveRDS(snowball, fn)
 }
 
-flat_snow <- snowball2df(snowball)  |>
- tibble::as_tibble()
-```
+flat_snow <- snowball2df(snowball) |>
+    tibble::as_tibble()
 
-### Save snowball as Excel file ([`snowball.xlsx`](data/snowball.xlsx))
+## ENCORE
 
-```{r}
-#| label: openalex_excel
-#| eval: false
-
-fn <- file.path(".", "data", "snowball.xlsx")
-if (!file.exists(fn)) {
-    to_xlsx(
-        snowball = snowball,
-        xls_filename = fn
+fn <- file.path(".", "data", "key_works_encore.rds")
+if (file.exists(fn)) {
+    key_works_encore <- readRDS(fn)
+} else {
+    key_works_encore <- oa_fetch(
+        entity = "works",
+        doi = kp_encore$DOI,
+        verbose = TRUE
     )
+    saveRDS(key_works_encore, fn)
 }
-```
 
-To download [click here](data/snowball.xlsx)
+ids <- openalexR:::shorten_oaid(key_works_encore$id)
 
-The column are: (the Concept columns are not that relevant at the moment)
-
-- **id**: internal id fromOpenAlex
-- **author**: authors of the paper
-- **publication_year**: publication year
-- **title**: title of the paper
-- **doi**: doi of the paper
-- **no_referenced_works**: number of references in the paper which are also in OpenAlex
-- **cited_global**: Number of times the paper has been cited
-- **cited_global_per_year**: standardised  number of times cirted (cited_global / number of years published)
-- **no_connections**: number of connections in the rgaph, i.e. either cited or citing a paper in the snowball corpus
-- **concepts_l0**: Concept 0. level assigned by OpenAlex
-- **concepts_l1**: Concept 1. level assigned by OpenAlex
-- **concepts_l2**: Concept 2. level assigned by OpenAlex
-- **concepts_l3**: Concept 3. level assigned by OpenAlex
-- **concepts_l4**: Concept 4. level assigned by OpenAlex
-- **concepts_l5**: Concept 5. level assigned by OpenAlex
-- **author_institute**: Institute of the authors
-- **institute_country**: Country of the institute
-- **abstract**: the abstract of the paper
-
-
-### Graph of links between references
-
-```{r}
-#| label: openalex_graph
-
-x <- snowball
-x
-
-if (!file.exists(file.path("figures", "snowball_cited_by_count.png"))) {
-plot_snowball(
-    snowball,
-    name = "snowball"
-)
+fn <- file.path(".", "data", "snowball_encore.rds")
+if (file.exists(fn)) {
+    snowball_encore <- readRDS(fn)
+} else {
+    snowball_encore <- oa_snowball(
+        identifier = ids,
+        verbose = TRUE
+    )
+    saveRDS(snowball_encore, fn)
 }
+
+flat_snow_encore <- snowball2df(snowball_encore) |>
+    tibble::as_tibble()
+
 ```
-![Snowball Cited by Count per Yeart](figures/snowball_cited_by_count_by_year.png)
-Fer a pdf of the graph (better resolution) [click here](figures/snowball_cited_by_count_by_year.pdf)
 
 ## Supplemented Snowball by Edges between all Papers
 
 We now supplement the citation network with the citations from the non-key papers, as these are not included in the previous network
 
 ```{r}
-#| label: openalex_supplement
+#| label: snowball_supplement
 #| 
 
 fn <- file.path("data", "snowball_supplemented.rds")
@@ -213,20 +183,391 @@ if (file.exists(fn)) {
         dplyr::distinct()
     saveRDS(snowball_supplemented, fn)
 }
-
 ```
 
 ```{r}
-#| label: openalex_supplement_graph
-#| 
+#| label: snowball_encore_supplement
+#|
 
-if (!file.exists(file.path("figures", "snowball_supplemented_cited_by_count.png"))) {
-    IPBES.R::plot_snowball(
-        snowball_supplemented, 
-        name = "snowball_supplemented", 
-        path = "figures"
+fn <- file.path("data", "snowball_encore_supplemented.rds")
+if (file.exists(fn)) {
+    snowball_encore_supplemented <- readRDS(fn)
+} else {
+    new_edges <- tibble(
+        from = character(0),
+        to = character(0)
+    )
+
+    works <- snowball_encore$nodes$id
+
+    for (i in 1:nrow(snowball_encore$nodes)) {
+        from <- works[[i]]
+        to <- gsub("https://openalex.org/", "", snowball_encore$nodes$referenced_works[[i]])
+        to_in_works <- to[to %in% works]
+        if (length(to_in_works) > 0) {
+            new_edges <- add_row(
+                new_edges,
+                tibble(
+                    from = from,
+                    to = to_in_works
+                )
+            )
+        }
+    }
+
+    snowball_encore_supplemented <- snowball_encore
+    snowball_encore_supplemented$edges <- add_row(snowball_encore_supplemented$edges, new_edges) |>
+        dplyr::distinct()
+    saveRDS(snowball_encore_supplemented, fn)
+}
+```
+
+## Papers in both snowball corpi
+
+```{r}
+nodes <- data.frame(
+    id = c(
+        "snowball",
+        "snowball_encore"
+    ),
+    n = c(
+        nrow(snowball$nodes),   
+        nrow(snowball_encore$nodes)
+    ),
+    n_kp = c(
+        nrow(key_works),   
+        nrow(key_works_encore)
+    )
+)
+
+edges <- expand.grid(
+    nodes$id,
+    nodes$id,
+    stringsAsFactors = FALSE
+)
+names(edges) <- c("from", "to")
+edges <- edges[edges$from != edges$to, ]
+rownames(edges) <- NULL
+
+
+## in_l1: keypaper c1 %in% keypaper c2
+edges$in_l1 <- c(
+        key_works_encore$id %in% key_works$id |> sum(),
+        key_works$id %in% key_works_encore$id |> sum()
+)
+
+
+## in_l2: keypaper c1 %in% nodes c2
+edges$in_l2 <- c(
+        gsub("https://openalex.org/", "", key_works_encore$id) %in% snowball$nodes$id |> sum(),
+        snowball$nodes$id %in% gsub("https://openalex.org/", "", key_works_encore$id) |> sum()
+)
+
+## in_l3: nodes c1 %in% nodes c2
+edges$in_l3 <- c(
+        snowball_encore$nodes$id %in% snowball$nodes$id |> sum(),
+        snowball$nodes$id %in% snowball_encore$nodes$id |> sum()
+)
+
+n_clust <- data.frame(
+    from = nodes$id,
+    to = nodes$id,
+    in_l1 = nodes$n_kp,
+    in_l2 = nodes$n_kp,
+    in_l3 = nodes$n
+) |>
+    select(from, in_l1, in_l2, in_l3) |>
+    dplyr::rename(n_l1 = in_l1, n_l2 = in_l2, n_l3 = in_l3)
+
+linkages <- n_clust |>
+    merge(x = edges, by = "from") |>
+    group_by(from) |>
+    summarize(
+        in_l1 = unique(n_l1) - sum(in_l1),
+        in_l2 = unique(n_l2) - sum(in_l2),
+        in_l3 = unique(n_l3) - sum(in_l3)
+    ) |>
+    ungroup() |>
+    mutate(to = from) |>
+    relocate(to, .after = "from") |>
+    rbind(edges)
+
+linkages_p <- merge(
+    linkages,
+    n_clust,
+    by = "from"
+) |>
+    mutate(
+        in_l1 = in_l1 / n_l1,
+        in_l2 = in_l2 / n_l2,
+        in_l3 = in_l3 / n_l3,
+        n_l1 = NULL,
+        n_l2 = NULL,
+        n_l3 = NULL
+    ) |>
+    as_tibble()
+
+####
+
+plot_chord <- function(linkages, level) {
+    m <- linkages |>
+        select(from, to, contains(level)) |>
+        tidyr::pivot_wider(
+            names_from = to,
+            values_from = contains(level)
+        )
+    rown <- m$from
+    m <- m[, -1]
+    m <- m[, sort(names(m))]
+    m <- as.matrix(m)
+    m[] <- as.numeric(m[])
+    dimnames(m)[[1]] <- rown
+
+    cd <- chorddiag(
+        m,
+        groupnamePadding = 20,
+        type = "directional"
+    )
+    return(cd)
+}## Graph of Citation Networks
+
+### Snownball from Key Papers
+
+```{r}
+#| label: snowball_graph
+
+if (!file.exists(file.path("figures", "snowball_cited_by_count.png"))) {
+    plot_snowball(
+        snowball,
+        name = "snowball"
+    )
+}
+
+if (!file.exists(file.path("figures", "snowball.html"))) {
+    message("Plotting Interactive snowball ...")
+    nwg <- IPBES.R::plot_snowball_interactive(
+        snowball = snowball,
+        key_works = key_works,
+        file = file.path("figures", "snowball.html")
     )
 }
 ```
+
+# Results
+
+The Tables have the following columns (the Concept columns are not that relevant at the moment):
+
+- **id**: internal id fromOpenAlex
+- **author**: authors of the paper
+- **publication_year**: publication year
+- **title**: title of the paper
+- **doi**: doi of the paper
+- **no_referenced_works**: number of references in the paper which are also in OpenAlex
+- **cited_global**: Number of times the paper has been cited
+- **cited_global_per_year**: standardised  number of times cirted (cited_global / number of years published)
+- **no_connections**: number of connections in the rgaph, i.e. either cited or citing a paper in the snowball corpus
+- **concepts_l0**: Concept 0. level assigned by OpenAlex
+- **concepts_l1**: Concept 1. level assigned by OpenAlex
+- **concepts_l2**: Concept 2. level assigned by OpenAlex
+- **concepts_l3**: Concept 3. level assigned by OpenAlex
+- **concepts_l4**: Concept 4. level assigned by OpenAlex
+- **concepts_l5**: Concept 5. level assigned by OpenAlex
+- **author_institute**: Institute of the authors
+- **institute_country**: Country of the institute
+- **abstract**: the abstract of the paper
+
+### Snowball from Key Papers
+```{r}
+#| label: snowball_table
+#|
+
+fn <- file.path("data", "snowball_table.rds")
+if (file.exists(fn)) {
+    snowball_table <- readRDS(fn)
+} else {
+    snowball_table <- to_data_frame(snowball = snowball)
+    saveRDS(snowball_table, fn)
+}
+snowball_table |>
+    mutate(
+        id = sprintf('<a href="https://openalex.org/%s" target="_blank">%s</a>', id, id),
+        doi = sprintf('<a href="%s" target="_blank">%s</a>', doi, gsub("https://doi.org/", "", doi))
+    ) |>
+    IPBES.R::table_dt(fixedColumns = NULL)
+```
+
+![Snowball Cited by Count per Yeart](figures/snowball_cited_by_count_by_year.png)
+For a pdf of the graph (better resolution) [click here](figures/snowball_cited_by_count_by_year.pdf)
+
+[Interactive](figures/snowball.html){target=_blank}
+
+### Snowball from Encore
+
+```{r}
+#| label: snowball_encore_table
+#|
+
+fn <- file.path("data", "snowball_encore_table.rds")
+if (file.exists(fn)) {
+    snowball_encore_table <- readRDS(fn)
+} else {
+    snowball_encore_table <- IPBES.R::to_data_frame(snowball = snowball_encore)
+    saveRDS(snowball_encore_table, fn)
+}
+snowball_encore_table |>
+    mutate(
+        id = sprintf('<a href="https://openalex.org/%s" target="_blank">%s</a>', id, id),
+        doi = sprintf('<a href="%s" target="_blank">%s</a>', doi, gsub("https://doi.org/", "", doi))
+    ) |>
+    IPBES.R::table_dt(fixedColumns = NULL)
+```
+
+### Overlab between Key Paper Snowball and Encore Snowball
+
+This section looks at common works between the corpi of the initial Key Paper Snowball (`c1`) and the Encore Snowball (`c2`).
+
+The links are classifiad using three levels:
+
+- **in_l1**: (keypaper in `c1`) in (keypaper in `c2`)
+- **in_l2**: (keypaper in `c1`) in (snowball in `c2`)
+- **in_l3**: (snowball in `c1`) in (snowball in `c2`)
+
+The overlap is symmetric.
+
+#### L1 (keypaper in key paper)
+
+```{r}
+#| label: L1_table
+dat <- key_works[key_works$id %in% key_works_encore$id, ] |>
+    mutate(
+        id = sprintf('<a href="%s" target="_blank">%s</a>', id, gsub("https://openalex.org/", "", id)),
+        doi = sprintf('<a href="%s" target="_blank">%s</a>', doi, gsub("https://doi.org/", "", doi))
+    )
+
+dat$author <- IPBES.R::abbreviate_authors(dat)
+
+dat |>
+    rename(
+        year = publication_year,
+        title = display_name,
+        journal = so
+    ) |>
+    select(
+        id,
+        doi,
+        author,
+        title,
+        journal
+    ) |>
+    IPBES.R::table_dt(fixedColumns = NULL, fn = "L1")
+```
+
+```{r}
+#| label: L1
+#| 
+
+plot_chord(linkages, "l1")
+```
+
+```{r}
+#| label: L1_p
+#| 
+
+plot_chord(linkages_p, "l1")
+```
+
+#### L2 (key paper in snowball)
+
+```{r}
+dat <- key_works[gsub("https://openalex.org/", "", key_works$id) %in% snowball_encore$nodes$id, ] |>
+    mutate(
+        id = sprintf('<a href="%s" target="_blank">%s</a>', id, gsub("https://openalex.org/", "", id)),
+        doi = sprintf('<a href="%s" target="_blank">%s</a>', doi, gsub("https://doi.org/", "", doi))
+    )
+
+dat$author <- IPBES.R::abbreviate_authors(dat)
+
+dat |>
+    rename(
+        year = publication_year,
+        title = display_name,
+        journal = so
+    ) |>
+    select(
+        id,
+        doi,
+        author,
+        title,
+        journal
+    ) |>
+    IPBES.R::table_dt(fixedColumns = NULL, fn = "L2")
+```
+
+```{r}
+#| label: l2
+plot_chord(linkages, "l2")
+```
+
+```{r}
+#| label: L2_p
+#| 
+
+plot_chord(linkages_p, "l2")
+```
+
+
+#### L3 (snowball in snowball)
+
+```{r}
+dat <- snowball$nodes[snowball$nodes$id %in% snowball_encore$nodes$id, ] |>
+    mutate(
+        id = sprintf('<a href="%s" target="_blank">%s</a>', paste0("https://openalex.org/", id), id ),
+        doi = sprintf('<a href="%s" target="_blank">%s</a>', doi, gsub("https://doi.org/", "", doi))
+    )
+
+dat$author <- IPBES.R::abbreviate_authors(dat)
+
+dat |>
+    rename(
+        year = publication_year,
+        title = display_name,
+        journal = so
+    ) |>
+    select(
+        id,
+        doi,
+        author,
+        title,
+        journal
+    ) |>
+    IPBES.R::table_dt(fixedColumns = NULL, fn = "L2")
+```
+
+
+```{r}
+#| label: L3
+plot_chord(linkages, "l3")
+```
+
+
+```{r}
+#| label: L3_p
+plot_chord(linkages_p, "l3")
+```
+
+
+### Snownball Key Papers Supplemented
+
 ![Supplemented Cited by count](figures/snowball_supplemented_cited_by_count_by_year.png)
 For a pdf of the reaults (better resolution) [click here](figures/snowball_supplemented_cited_by_count_by_year.pdf)
+
+[Interactive](figures/snowball_supplemented.html){target=_blank}
+
+### Snownball from Encore
+
+No graphs useful due to amount of papers.
+
+### Snownball Encore  Supplemented
+
+No graphs useful due to amount of papers.
+
