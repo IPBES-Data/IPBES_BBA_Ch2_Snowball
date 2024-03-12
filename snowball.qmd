@@ -436,6 +436,8 @@ The overlap is symmetric.
 
 #### L1 (keypaper in key paper)
 
+##### Table of papers
+
 ```{r}
 #| label: L1_table
 dat <- key_works[key_works$id %in% key_works_encore$id, ] |>
@@ -462,12 +464,18 @@ dat |>
     IPBES.R::table_dt(fixedColumns = NULL, fn = "L1")
 ```
 
+
+##### Number of papers
+
 ```{r}
 #| label: L1
 #| 
 
 plot_chord(linkages, "l1")
 ```
+
+
+##### Proportion of papers
 
 ```{r}
 #| label: L1_p
@@ -477,6 +485,8 @@ plot_chord(linkages_p, "l1")
 ```
 
 #### L2 (key paper in snowball)
+
+##### Table of papers
 
 ```{r}
 dat <- key_works[gsub("https://openalex.org/", "", key_works$id) %in% snowball_encore$nodes$id, ] |>
@@ -503,10 +513,16 @@ dat |>
     IPBES.R::table_dt(fixedColumns = NULL, fn = "L2")
 ```
 
+
+##### Number of papers
+
 ```{r}
 #| label: l2
 plot_chord(linkages, "l2")
 ```
+
+
+##### Proportion of papers
 
 ```{r}
 #| label: L2_p
@@ -517,6 +533,9 @@ plot_chord(linkages_p, "l2")
 
 
 #### L3 (snowball in snowball)
+
+
+##### Table of papers
 
 ```{r}
 dat <- snowball$nodes[snowball$nodes$id %in% snowball_encore$nodes$id, ] |>
@@ -544,11 +563,17 @@ dat |>
 ```
 
 
+
+##### Number of papers
+
 ```{r}
 #| label: L3
 plot_chord(linkages, "l3")
 ```
 
+
+
+##### Proportion of papers
 
 ```{r}
 #| label: L3_p
